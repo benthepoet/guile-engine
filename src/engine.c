@@ -23,11 +23,24 @@ static SCM init () {
   return scm_from_int(x);
 }
 
+static void clear () {
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_RenderClear(renderer);
+  SDL_RenderPresent(renderer);
+}
+
+static SCM get_ticks () {
+  Uint32 ticks = SDL_GetTicks();
+  return scm_from_uint32(ticks);
+}
+
 static SCM poke (SCM addr) {
   int c_addr = scm_to_int(addr);
   int col_y = c_addr / COLS_H;
   int col_x = c_addr % COLS_H;
 
+  clear();
+  
   SDL_Rect rect = { col_x * CHAR_W, col_y * CHAR_H, CHAR_W, CHAR_H };
   SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
   SDL_RenderFillRect(renderer, &rect);
@@ -35,9 +48,17 @@ static SCM poke (SCM addr) {
   return scm_from_int(c_addr);
 }
 
+static SCM delay (SCM s_ms) {
+  Uint32 ms = scm_to_uint32(s_ms);
+  SDL_Delay(ms);
+  return SCM_BOOL_T;
+}
+
 static void inner_main (void *data, int argc, char **argv) {
-  scm_c_define_gsubr("video-init", 0, 0, 0, init);
-  scm_c_define_gsubr("video-poke", 1, 0, 0, poke);
+  scm_c_define_gsubr("sys-init", 0, 0, 0, init);
+  scm_c_define_gsubr("sys-get-ticks", 0, 0, 0, get_ticks);
+  scm_c_define_gsubr("sys-poke", 1, 0, 0, poke);
+  scm_c_define_gsubr("sys-delay", 1, 0, 0, delay);
   scm_shell(argc, argv);
 }
 
