@@ -1,75 +1,97 @@
-#include <stdlib.h>
 #include <libguile.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
+
+#define CYAN {100,200,255}
+#define AMBER {255,200,100}
+#define BLACK {0,0,0}
 
 #define WIN_W 640
 #define WIN_H 480
 
-#define CHAR_W 8
-#define CHAR_H 8
+#define CHRS 256
 
-#define COLS_H (WIN_W / CHAR_W)
-#define COLS_V (WIN_H / CHAR_H)
-
-#define CHARSET_FILE "assets/charset.bmp"
+#define TICKS_PER_SECOND 20
+#define SKIP_TICKS (1000 / TICKS_PER_SECOND)
 
 SDL_Window *window;
 SDL_Renderer *renderer;
-SDL_Texture *charset;
+SDL_Texture *textures[CHRS];
 
-static SCM init () {
+int font_w;
+int font_h;
+
+SCM initw(SCM s_font_file, SCM s_font_w, SCM s_font_h) {
   SDL_Init(SDL_INIT_VIDEO);
-  int x = SDL_CreateWindowAndRenderer(WIN_W, WIN_H, 0, &window, &renderer);
+  SDL_CreateWindowAndRenderer(WIN_W, WIN_H, 0, &window, &renderer);
 
-  SDL_Surface *surface = SDL_LoadBMP(CHARSET_FILE);
-  charset = SDL_CreateTextureFromSurface(renderer, surface);
-  SDL_FreeSurface(surface);
+  font_w = scm_to_int(s_font_w);
+  font_h = scm_to_int(s_font_h);
+
+  char *font_file = scm_to_locale_string(s_font_file);
   
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  TTF_Init();
+  TTF_Font *font = TTF_OpenFont(font_file, font_h);
+
+  free(font_file);
+  
+  SDL_Surface *text_surface;
+  SDL_Color color = AMBER;
+  for (int i = 0; i < CHRS; i++) {
+    char c[1] = { i };
+    text_surface = TTF_RenderText_Solid(font, c, color); 
+    textures[i] = SDL_CreateTextureFromSurface(renderer, text_surface);
+    SDL_FreeSurface(text_surface);
+  }
+  
+  TTF_CloseFont(font);
+  TTF_Quit();
+
+  return SCM_BOOL_T;
+}
+
+SCM clearw() {
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
   SDL_RenderClear(renderer);
-  SDL_RenderPresent(renderer);
-  return scm_from_int(x);
+
+  return SCM_BOOL_T;
 }
 
-static void clear () {
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  SDL_RenderClear(renderer);
-  SDL_RenderPresent(renderer);
-}
-
-static SCM get_ticks () {
-  Uint32 ticks = SDL_GetTicks();
-  return scm_from_uint32(ticks);
-}
-
-static SCM poke (SCM addr, SCM s_chr) {
-  int c_addr = scm_to_int(addr);
-  int col_y = c_addr / COLS_H;
-  int col_x = c_addr % COLS_H;
-
-  char chr = scm_to_char(s_chr);
-  int chr_y = chr / 16;
-  int chr_x = chr % 16;
+SCM printw(SCM s_x, SCM s_y, SCM s_str) {
+  int x = scm_to_int(s_x);
+  int y = scm_to_int(s_y);
   
-  clear();
+  char *str = scm_to_locale_string(s_str);
+  SDL_Rect src = { 0, 0, font_w, font_h };
   
-  SDL_Rect src = { chr_x * CHAR_W, chr_y * CHAR_H, CHAR_W, CHAR_H };
-  SDL_Rect dst = { col_x * CHAR_W, col_y * CHAR_H, CHAR_W, CHAR_H };
-  SDL_RenderCopy(renderer, charset, &src, &dst);
-  SDL_RenderPresent(renderer);
-  return scm_from_int(c_addr);
+  for (int i = 0; i < strlen(str); i++) {
+    SDL_Rect dest = { (x + i) * font_w, y * font_h, font_w, font_h };
+    SDL_RenderCopy(renderer, textures[str[i]], &src, &dest);
+  }
+  free(str);
+  
+  return SCM_BOOL_T;
 }
 
-static SCM delay (SCM s_ms) {
-  Uint32 ms = scm_to_uint32(s_ms);
-  SDL_Delay(ms);
+SCM refreshw() {
+  SDL_RenderPresent(renderer);
+
+  return SCM_BOOL_T;
+}
+
+SCM exitw() {
+  TTF_Quit();
+  SDL_DestroyWindow(window);
+  SDL_Quit();
+  
   return SCM_BOOL_T;
 }
 
 void init_ascii () {
-  scm_c_define_gsubr("sys-init", 0, 0, 0, init);
-  scm_c_define_gsubr("sys-get-ticks", 0, 0, 0, get_ticks);
-  scm_c_define_gsubr("sys-poke", 2, 0, 0, poke);
-  scm_c_define_gsubr("sys-delay", 1, 0, 0, delay);
+  scm_c_define_gsubr("initw", 3, 0, 0, initw);
+  scm_c_define_gsubr("clearw", 0, 0, 0, clearw);
+  scm_c_define_gsubr("printw", 3, 0, 0, printw);
+  scm_c_define_gsubr("refreshw", 0, 0, 0, refreshw);
+  scm_c_define_gsubr("exitw", 0, 0, 0, exitw);
 }
 
