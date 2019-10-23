@@ -66,15 +66,10 @@ static SCM delay (SCM s_ms) {
   return SCM_BOOL_T;
 }
 
-static void inner_main (void *data, int argc, char **argv) {
+void init_ascii () {
   scm_c_define_gsubr("sys-init", 0, 0, 0, init);
   scm_c_define_gsubr("sys-get-ticks", 0, 0, 0, get_ticks);
   scm_c_define_gsubr("sys-poke", 2, 0, 0, poke);
   scm_c_define_gsubr("sys-delay", 1, 0, 0, delay);
-  scm_shell(argc, argv);
 }
 
-int main (int argc, char **argv) {
-  scm_boot_guile(argc, argv, inner_main, 0);
-  return 0;
-}
