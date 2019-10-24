@@ -79,6 +79,13 @@ SCM refreshw() {
   return SCM_BOOL_T;
 }
 
+SCM delayw(SCM s_ms) {
+  Uint32 ms = scm_to_uint32(s_ms);
+  SDL_Delay(ms);
+  
+  return SCM_BOOL_T;
+}
+
 SCM exitw() {
   TTF_Quit();
   SDL_DestroyWindow(window);
@@ -92,6 +99,7 @@ void init_ascii () {
   scm_c_define_gsubr("clearw", 0, 0, 0, clearw);
   scm_c_define_gsubr("printw", 3, 0, 0, printw);
   scm_c_define_gsubr("refreshw", 0, 0, 0, refreshw);
+  scm_c_define_gsubr("delayw", 1, 0, 0, delayw);
   scm_c_define_gsubr("exitw", 0, 0, 0, exitw);
 }
 
