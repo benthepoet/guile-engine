@@ -23,12 +23,11 @@
 (define sleep-ms 150)
 
 (define (draw-lines x y lines)  
-  (let ((i 0)
-	(j (vector-length lines)))
-    (while (< i j)
-      (printw x (+ i y) (vector-ref lines i))
-      (set! i (+ i 1)))
-    (refreshw)))
+  (do ((i 0 (+ i 1))
+       (j (vector-length lines)))
+      ((>= i j))
+    (printw x (+ i y) (vector-ref lines i)))
+  (refreshw))
 
 (define (draw-frames x y frames)
   (let ((x x)
